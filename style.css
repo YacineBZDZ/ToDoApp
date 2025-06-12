@@ -1,0 +1,42 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f9f9f9;
+    margin: 0;
+    padding: 0;
+}
+.container {
+    max-width: 600px;
+    margin: 40px auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+#fields > .field-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.field-row input, .field-row select {
+    margin-right: 10px;
+}
+.field-row label {
+    margin-right: 5px;
+}
+.field-row button {
+    margin-left: 5px;
+}
+button {
+    margin-top: 10px;
+    margin-right: 5px;
+    padding: 5px 10px;
+}
+table {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+}
+th, td {
+    padding: 8px;
+    text-align: left;
+}
