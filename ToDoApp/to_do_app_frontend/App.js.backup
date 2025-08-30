@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { Keyboard, KeyboardAvoidingView, TouchableOpacity, Platform, StyleSheet, Text, View, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, TouchableOpacity, WriteTaskWrapper,Platform, StyleSheet, Text, View, TextInput, Alert, ActivityIndicator } from 'react-native';
 import Task from './components/task';
 import TaskService from './routes/taskService';
 import React, {useState, useEffect} from 'react';
@@ -20,31 +20,47 @@ export default function App() {
   const [taskItems, setTaskItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
-  const [completingTasks, setCompletingTasks] = useState(new Set());
 
+  // Load tasks when component mounts
   useEffect(() => {
-    loadTasks();
+    // Log network info for debugging
+    NetworkUtils.getNetworkInfo();
+    
+    // Test connection first, then load tasks
+    testConnectionAndLoadTasks();
   }, []);
 
-  const loadTasks = async () => {
+  const testConnectionAndLoadTasks = async () => {
     try {
       setIsLoadingTasks(true);
       
-      const isConnected = await TaskService.testConnection();
+      // Test connection first
+      console.log('Testing network connection...');
+      const connectionTest = await NetworkUtils.testConnection();
       
-      if (!isConnected) {
-        Alert.alert(
-          'Connection Error', 
-          'Cannot connect to the backend server. Please make sure:\n\n• Your Laravel server is running on port 8001\n• You are using the correct IP address\n• For Android emulator: Backend should be accessible at 10.0.2.2:8001\n• For physical device: Use your computer\'s local IP address'
-        );
-        return;
+      if (!connectionTest.success) {
+        throw new Error(`Connection failed: ${connectionTest.error || connectionTest.status}`);
       }
       
+      // If connection works, load tasks
+      await loadTasks();
+    } catch (error) {
+      Alert.alert(
+        'Connection Error', 
+        `Failed to connect to server: ${error.message}\n\nPlease check:\n- Server is running on http://127.0.0.1:8001\n- Network connection\n- Firewall settings`
+      );
+      console.error('Connection test failed:', error);
+      setIsLoadingTasks(false);
+    }
+  };
+
+  const loadTasks = async () => {
+    try {
       const tasks = await TaskService.getAllTasks();
       setTaskItems(tasks);
-      
     } catch (error) {
-      Alert.alert('Error', `Failed to load tasks: ${error.message}`);
+      Alert.alert('Error', 'Failed to load tasks. Please try again.');
+      console.error('Error loading tasks:', error);
     } finally {
       setIsLoadingTasks(false);
     }
@@ -60,16 +76,16 @@ export default function App() {
       setIsLoading(true);
       Keyboard.dismiss();
       
+      // Create task in backend
       const newTask = await TaskService.createTask(task.trim());
       
+      // Update local state
       setTaskItems([...taskItems, newTask]);
       setTask('');
       
     } catch (error) {
-      Alert.alert(
-        'Error', 
-        `Failed to add task:\n\n${error.message}`
-      );
+      Alert.alert('Error', 'Failed to add task. Please try again.');
+      console.error('Error adding task:', error);
     } finally {
       setIsLoading(false);
     }
@@ -79,40 +95,29 @@ export default function App() {
     const taskToDelete = taskItems[index];
     
     try {
-      setCompletingTasks(prev => new Set([...prev, taskToDelete.id]));
+      // Delete task from backend
+      await TaskService.deleteTask(taskToDelete.id);
       
-      setTimeout(async () => {
-        try {
-          await TaskService.deleteTask(taskToDelete.id);
-          
-          let itemsCopy = [...taskItems];
-          itemsCopy.splice(index, 1);
-          setTaskItems(itemsCopy);
-          
-          setCompletingTasks(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(taskToDelete.id);
-            return newSet;
-          });
-          
-        } catch (error) {
-          setCompletingTasks(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(taskToDelete.id);
-            return newSet;
-          });
-          Alert.alert('Error', 'Failed to delete task. Please try again.');
-        }
-      }, 500);
+      // Update local state
+      let itemsCopy = [...taskItems];
+      itemsCopy.splice(index, 1);
+      setTaskItems(itemsCopy);
       
     } catch (error) {
       Alert.alert('Error', 'Failed to delete task. Please try again.');
+      console.error('Error deleting task:', error);
     }
   };
 
   return (
     <View style={styles.container}>
+
+    
+
+
+      {/*Task Title Component*/}
       <View style={styles.taskListContainer}>
+
           <Text style={styles.sectionTitle}>Today's Tasks</Text>
 
           <View style={styles.items}>
@@ -124,19 +129,19 @@ export default function App() {
             ) : (
               taskItems.map((item, index) => {
                 return (
-                  <Task 
-                    key={item.id || index} 
-                    text={item.title || item.text || item}
-                    onComplete={() => completeTask(index)}
-                    isCompleting={completingTasks.has(item.id)}
-                  />
+                  <TouchableOpacity key={item.id || index} onPress={() => completeTask(index)}>
+                    <Task key={item.id || index} text={item.title || item.text || item} />
+                  </TouchableOpacity>
                 )
               })
             )}
+           
+           {/*This is where the tasks will go!*/}
           </View>
 
           <StatusBar style="auto" />
        </View>
+      {/*Task Input*/}
       <KeyboardAvoidingView
       behavior={Platform.OS === "android" ? "padding" : "height"}
       style={styles.WriteTaskWrapper}
