@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { 
-  Keyboard, 
-  KeyboardAvoidingView, 
-  TouchableOpacity, 
-  Platform, 
-  StyleSheet, 
-  Text, 
-  View, 
-  TextInput, 
-  Alert, 
-  ActivityIndicator 
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  TouchableOpacity,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Task from './task';
 import TaskService from '../routes/taskService';
@@ -42,21 +41,22 @@ const TodoApp = ({ onLogout }) => {
     try {
       setIsLoadingTasks(true);
       
-      const isConnected = await TaskService.testConnection();
-      
-      if (!isConnected) {
-        Alert.alert(
-          'Connection Error', 
-          'Cannot connect to the backend server. Please make sure:\n\n• Your Laravel server is running on port 8001\n• You are using the correct IP address\n• For Android emulator: Backend should be accessible at 10.0.2.2:8001\n• For physical device: Use your computer\'s local IP address'
-        );
-        return;
-      }
-      
       const tasks = await TaskService.getAllTasks();
       setTaskItems(tasks);
       
     } catch (error) {
-      Alert.alert('Error', `Failed to load tasks: ${error.message}`);
+      if (error.message.includes('Session expired') || error.message.includes('authentication')) {
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired. Please login again.',
+          [{
+            text: 'OK',
+            onPress: () => onLogout()
+          }]
+        );
+      } else {
+        Alert.alert('Error', `Failed to load tasks: ${error.message}`);
+      }
     } finally {
       setIsLoadingTasks(false);
     }
@@ -78,10 +78,21 @@ const TodoApp = ({ onLogout }) => {
       setTask('');
       
     } catch (error) {
-      Alert.alert(
-        'Error', 
-        `Failed to add task:\n\n${error.message}`
-      );
+      if (error.message.includes('Session expired') || error.message.includes('authentication')) {
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired. Please login again.',
+          [{
+            text: 'OK',
+            onPress: () => onLogout()
+          }]
+        );
+      } else {
+        Alert.alert(
+          'Error', 
+          `Failed to add task:\n\n${error.message}`
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -113,7 +124,19 @@ const TodoApp = ({ onLogout }) => {
             newSet.delete(taskToDelete.id);
             return newSet;
           });
-          Alert.alert('Error', 'Failed to delete task. Please try again.');
+          
+          if (error.message.includes('Session expired') || error.message.includes('authentication')) {
+            Alert.alert(
+              'Session Expired',
+              'Your session has expired. Please login again.',
+              [{
+                text: 'OK',
+                onPress: () => onLogout()
+              }]
+            );
+          } else {
+            Alert.alert('Error', 'Failed to delete task. Please try again.');
+          }
         }
       }, 500);
       
@@ -127,19 +150,22 @@ const TodoApp = ({ onLogout }) => {
       await AuthService.logout();
       onLogout();
     } catch (error) {
-      Alert.alert('Error', 'Failed to logout');
+      Alert.alert('Error', 'Failed to logout properly, but you will be logged out.');
+      onLogout();
     }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.welcomeText}>
-          Welcome, {user?.name || 'User'}!
-        </Text>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.welcomeText}>
+            Welcome, {user?.name || user?.username || 'User'}!
+          </Text>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.taskListContainer}>
@@ -164,8 +190,6 @@ const TodoApp = ({ onLogout }) => {
             })
           )}
         </View>
-
-        <StatusBar style="auto" />
       </View>
 
       <KeyboardAvoidingView
@@ -198,32 +222,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#B1E2F0',
   },
   header: {
+    backgroundColor: '#55BCF6',
+    paddingTop: 50,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
   },
   welcomeText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#FFF',
   },
   logoutButton: {
-    backgroundColor: '#ff4444',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 15,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 20,
   },
   logoutText: {
     color: '#FFF',
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '600',
   },
   taskListContainer: {
+    padding: 20,
+    paddingTop: 30,
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
   },
   sectionTitle: {
     fontSize: 24,

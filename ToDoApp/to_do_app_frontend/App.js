@@ -36,9 +36,15 @@ export default function App() {
     setShowRegister(false);
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setShowRegister(false);
+  const handleLogout = async () => {
+    try {
+      await AuthService.logout();
+      setIsAuthenticated(false);
+      setShowRegister(false);
+    } catch (error) {
+      setIsAuthenticated(false);
+      setShowRegister(false);
+    }
   };
 
   const switchToRegister = () => {
