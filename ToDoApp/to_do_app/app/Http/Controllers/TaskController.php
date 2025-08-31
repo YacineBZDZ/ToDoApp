@@ -33,16 +33,18 @@ class TaskController extends Controller
         }
 
         try {
+            $userId = $request->user()->id;
+
             if ($request->has('search')) {
-                $tasks = $this->taskService->searchTasks($request->search);
+                $tasks = $this->taskService->searchTasks($request->search, $userId);
             } elseif ($request->has('status')) {
                 if ($request->status === 'completed') {
-                    $tasks = $this->taskService->getCompletedTasks();
+                    $tasks = $this->taskService->getCompletedTasks($userId);
                 } else {
-                    $tasks = $this->taskService->getPendingTasks();
+                    $tasks = $this->taskService->getPendingTasks($userId);
                 }
             } else {
-                $tasks = $this->taskService->getAllTasks();
+                $tasks = $this->taskService->getAllTasks($userId);
             }
 
             return response()->json([
@@ -79,7 +81,8 @@ class TaskController extends Controller
         }
 
         try {
-            $task = $this->taskService->createTask($validator->validated());
+            $userId = $request->user()->id;
+            $task = $this->taskService->createTask($validator->validated(), $userId);
 
             return response()->json([
                 'success' => true,
@@ -98,10 +101,11 @@ class TaskController extends Controller
         }
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         try {
-            $task = $this->taskService->findTaskById($id);
+            $userId = $request->user()->id;
+            $task = $this->taskService->findTaskById($id, $userId);
 
             if (!$task) {
                 return response()->json([
@@ -145,7 +149,8 @@ class TaskController extends Controller
         }
 
         try {
-            $task = $this->taskService->findTaskById($id);
+            $userId = $request->user()->id;
+            $task = $this->taskService->findTaskById($id, $userId);
 
             if (!$task) {
                 return response()->json([
@@ -154,7 +159,7 @@ class TaskController extends Controller
                 ], 404);
             }
 
-            $updatedTask = $this->taskService->updateTask($id, $validator->validated());
+            $updatedTask = $this->taskService->updateTask($id, $validator->validated(), $userId);
 
             return response()->json([
                 'success' => true,
@@ -173,10 +178,11 @@ class TaskController extends Controller
         }
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
         try {
-            $task = $this->taskService->findTaskById($id);
+            $userId = $request->user()->id;
+            $task = $this->taskService->findTaskById($id, $userId);
 
             if (!$task) {
                 return response()->json([
@@ -185,7 +191,7 @@ class TaskController extends Controller
                 ], 404);
             }
 
-            $this->taskService->deleteTask($id);
+            $this->taskService->deleteTask($id, $userId);
 
             return response()->json([
                 'success' => true,
@@ -201,10 +207,11 @@ class TaskController extends Controller
         }
     }
 
-    public function toggle(int $id): JsonResponse
+    public function toggle(Request $request, int $id): JsonResponse
     {
         try {
-            $task = $this->taskService->findTaskById($id);
+            $userId = $request->user()->id;
+            $task = $this->taskService->findTaskById($id, $userId);
 
             if (!$task) {
                 return response()->json([
@@ -213,7 +220,7 @@ class TaskController extends Controller
                 ], 404);
             }
 
-            $updatedTask = $this->taskService->toggleTaskCompletion($id);
+            $updatedTask = $this->taskService->toggleTaskCompletion($id, $userId);
 
             return response()->json([
                 'success' => true,
